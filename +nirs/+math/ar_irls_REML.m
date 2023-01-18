@@ -173,7 +173,22 @@ function stats = ar_irls_reml(d,X,Pmax,tune,useGPU)
             gpuH=diag(g_Sw)-g_wXf*pinv(g_wXf'*g_wXf)*g_wXf';
             gpuHtH = gpuH' * gpuH;  
 
-            stats.dfe =gather(sum(reshape(gpuH,[],1).*reshape(gpuH,[],1))^2/sum(reshape(gpuHtH,[],1).^2));
+%             stats.dfe =gather(sum(reshape(gpuH,[],1).*reshape(gpuH,[],1))^2/sum(reshape(gpuHtH,[],1).^2));
+                     % This order clears up memory using inplace insertion for
+            % variables
+            clear gpuH
+
+            % Lower/denominator
+            gpuHtH_sumsq=sum(reshape(gpuHtH,[],1).^2);
+            clear gpuHtH
+
+            % Upper/numerator
+            gpuH=diag(g_Sw)-g_wXf*pinv(g_wXf'*g_wXf)*g_wXf';
+            gpuH_upper=sum(reshape(gpuH,[],1).*reshape(gpuH',[],1))^2;
+            clear gpuH
+
+            stats.dfe =gather(gpuH_upper/gpuHtH_sumsq);
+            %stats.dfe =gather(sum(reshape(gpuH,[],1).*reshape(gpuH',[],1))^2/sum(reshape(gpuHtH,[],1).^2));
             
         else
             %  Satterthwaite estimate of model DOF
