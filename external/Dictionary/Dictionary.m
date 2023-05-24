@@ -225,7 +225,7 @@ classdef Dictionary
                     out{k} = obj.values{idx};
                 else
                     out{k} = [];
-                    warning("%s does not exist in Dictionary",keys{k});
+                    warning('%s does not exist in Dictionary',keys{k});
                 end
             end
             
