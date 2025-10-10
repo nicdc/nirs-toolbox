@@ -9,8 +9,7 @@ classdef sFCStats
     %     Z            - Fisher Z-transform
     %     p            - p-values f
     %     dfe          - degrees of freedom
-    %     custom_draw_function - function handle that when specified
-    %                   changes the drawing 
+    %
     %     
     %  Methods:
     %     
@@ -28,7 +27,6 @@ classdef sFCStats
         % Results storage
         R               % correlation value (depends on model)
         dfe          	% degrees of freedom
-        custom_draw_function=[];
     end
         
    properties ( Hidden = true )     
@@ -78,12 +76,16 @@ classdef sFCStats
          function p = get.p(obj)
 
              if(~isempty(obj.pvalue_fixed))
-                if(isa(obj.pvalue_fixed,'nirs.bootstrapping.bootstrap_result'))
-                    p=obj.pvalue_fixed.pvalue;
-                    p=reshape(p,size(obj.t));
-                else
-                    p=obj.pvalue_fixed;  % hack to allow reuse in the Conn Seed model
-                end
+                   if(isa(obj.pvalue_fixed,'nirs.bootstrapping.bootstrap_result'))
+                       p=reshape(obj.pvalue_fixed.pvalue,size(obj.t));
+                   else
+                        p=obj.pvalue_fixed;  % hack to allow reuse in the Conn Seed model
+                   end
+                    for idx=1:size(p,3)
+                        p(:,:,idx)=tril(p(:,:,idx),-1)+tril(p(:,:,idx),-1)'+eye(size(p(:,:,idx)));
+                    end
+
+
                 return
              end
              
