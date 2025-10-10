@@ -114,7 +114,7 @@ classdef AR_IRLS < nirs.modules.AbstractGLM
                         stats = nirs.math.ar_irls_REML( d, U(:,lst)*s(lst,lst), Pmax ,[],obj.useGPU,obj.precisionSingle);
                     else
                         if(obj.nonstationary_noise)
-                            stats = nirs.math.ar_irnnls( d, U(:,lst)*s(lst,lst), Pmax ,[], obj.useGPU, obj.precisionSingle );
+                            stats = nirs.math.ar_irnsls( d, U(:,lst)*s(lst,lst), Pmax ,[], obj.useGPU, obj.precisionSingle );
                         else
                             stats = nirs.math.ar_irls( d, U(:,lst)*s(lst,lst), Pmax ,[],false,obj.useGPU, obj.precisionSingle);
                         end

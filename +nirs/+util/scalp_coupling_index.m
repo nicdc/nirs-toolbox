@@ -60,9 +60,11 @@ for i=1:height(link)
     [pwrest,j] = max(pxx(f<1.7)); % FIX Make it age-dependent
     sci(i)=similarity(length(filtered_nirs_data1));
     power(i)=pwrest;
-    fpower(i)=f(j);    
+    fpower(i)=f(j);
+    cv_hbo(i,1) = std(nirs_data1)/mean(nirs_data1) * 100;
+    cv_hbr(i,1)= std(nirs_data2)/mean(nirs_data2) * 100;
 end
 
 
-tbl=[link table(sci,power,fpower)];
+tbl=[link table(sci,power,fpower,cv_hbo,cv_hbr)];
 
