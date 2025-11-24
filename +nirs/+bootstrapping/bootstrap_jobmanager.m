@@ -11,19 +11,29 @@ classdef bootstrap_jobmanager
         save_temp_file=true;
         save_temp_file_frequency=5000;
         temp_file_name='temp_bootstrap_jobmanager.mat';
+        load_from_previous=true;
 
     end
 
     methods
         function varargout = run(obj,data)
             result=cell(obj.max_iterations,1);
+
+            iterrunning=1;
+            if(obj.load_from_previous & obj.save_temp_file)
+                try
+                    load(obj.temp_file_name,'result','iterrunning');
+                    disp('Loaded from saved results');
+                end
+            end
+
             if(iscell(obj.pipeline))
 
                 truth=cell(length(obj.pipeline),1);
                 for j=1:length(obj.pipeline)
                     for j=1:length(obj.pipeline)
-                        tmpTruth = obj.pipeline{j}.run(data);
-                        truth{j}=feval(obj.data_pooling_function,tmpTruth);
+                        tmpTruth(j) = obj.pipeline{j}.run(data);
+                        truth{j}=feval(obj.data_pooling_function,tmpTruth(j));
                     end
                 end
             else
@@ -35,8 +45,8 @@ classdef bootstrap_jobmanager
                 queue = createParallelProgressBar(obj.max_iterations);
             end
             if(obj.save_temp_file)
-                numsaves=ceil(obj.max_iterations/obj.save_temp_file_frequency);
-                iterrunning=1;
+                numsaves=ceil((obj.max_iterations-iterrunning)/obj.save_temp_file_frequency);
+                %iterrunning=1;
                 for saveIter=1:numsaves
                     if(obj.use_parallel_computing)
                         iit=min(iterrunning+obj.save_temp_file_frequency-1,obj.max_iterations);
@@ -45,13 +55,14 @@ classdef bootstrap_jobmanager
                             result{iter}=obj.run_iteration(data);
                         end
                     else
+                        iit=min(iterrunning+obj.save_temp_file_frequency-1,obj.max_iterations);
                         for iter=1:iit
                             disp(iter);
                             result{iter}=obj.run_iteration(data);
                         end
                     end
                     disp(['Iteration ' num2str(iit) ' of ' num2str(obj.max_iterations) ': Saving temp file as ' obj.temp_file_name])
-                    save(obj.temp_file_name,"result","iterrunning",'-mat');
+                    save(obj.temp_file_name,"result","iterrunning",'-mat','-v7.3');
                     iterrunning=iit+1;
                 end
 
@@ -71,12 +82,13 @@ classdef bootstrap_jobmanager
                 end
             end
 
-            ResultBS=nirs.bootstrapping.bootstrap_result;
-            ResultBS.truth=horzcat(truth{:});
-
+           
 
             % Collapse the results
             for j=1:length(result{1})
+                 ResultBS{j}=nirs.bootstrapping.bootstrap_result;
+                 ResultBS{j}.truth=truth{j};
+
                 R=zeros(size(result{1}{j},1),length(result));
                 for iter=1:length(result)
                     R(:,iter)=result{iter}{j};
@@ -85,23 +97,27 @@ classdef bootstrap_jobmanager
                 for i=1:size(R,1)
                     
                     if(all(isnan(R(i,:))))
-                        ResultBS.value_bins(:,i,j)=nan(size(R,2)+1,1);
-                        ResultBS.ecdf(:,i,j)=nan(size(R,2)+1,1);
+                        ResultBS{j}.value_bins(:,i)=nan(size(R,2)+1,1);
+                        ResultBS{j}.ecdf(:,i)=nan(size(R,2)+1,1);
                     else
-                        [ResultBS.ecdf(:,i,j),...
-                            ResultBS.value_bins(:,i,j)]=ecdf(R(i,:));
-                        lst=find(ResultBS.value_bins(:,i,j)>mean(R(i,:)));
-                        ResultBS.ecdf(lst,i,j)=1-ResultBS.ecdf(lst,i,j);
-                       
-
+                        [a,b]=ecdf(R(i,:));
+                        lst=[1:min(length(a),size(R,2)+1)];
+                        ResultBS{j}.ecdf(lst,i)=a(lst);
+                        ResultBS{j}.value_bins(lst,i)=b(lst);
+                        lst=find(ResultBS{j}.value_bins(:,i)>mean(R(i,:)));
+                        ResultBS{j}.ecdf(lst,i)=1-ResultBS{j}.ecdf(lst,i);
                     end
                 end
 
             end
 
             if(nargout>0)
-                tmpTruth.pvalue_fixed=ResultBS;
+                for i=1:length(ResultBS)
+                    tmpTruth(i).pvalue_fixed=ResultBS{i};
+                end
+
                 varargout{1}=tmpTruth;
+                
             end
             if(nargout>1)
                 varargout{2}=ResultBS;
